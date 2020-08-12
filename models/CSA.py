@@ -21,7 +21,8 @@ class CSA(BaseModel):
 
 
         self.vgg=Vgg16(requires_grad=False)
-        self.vgg=self.vgg.cuda()
+        if len(opt.gpu_ids) > 0:
+            self.vgg=self.vgg.cuda()
         self.input_A = self.Tensor(opt.batchSize, opt.input_nc,
                                    opt.fineSize, opt.fineSize)
         self.input_B = self.Tensor(opt.batchSize, opt.output_nc,
