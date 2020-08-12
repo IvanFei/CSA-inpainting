@@ -1,12 +1,14 @@
 import torch
-from util.NonparametricShift import NonparametricShift
-from util.MaxCoord import MaxCoord
-import util.util as util
+from deep_inpainting.models.csa_inpainting.util.NonparametricShift import NonparametricShift
+from deep_inpainting.models.csa_inpainting.util.MaxCoord import MaxCoord
+import deep_inpainting.models.csa_inpainting.util.util as util
 import torch.nn as nn
 import torch
 
 
 from torch.autograd import Variable
+
+
 class CSAFunction(torch.autograd.Function):
 
     @staticmethod
@@ -19,7 +21,7 @@ class CSAFunction(torch.autograd.Function):
 
         ctx.bz, c_real, ctx.h, ctx.w = input.size()
         c = c_real
-        ctx.Tensor = torch.cuda.FloatTensor if torch.cuda.is_available else torch.FloatTensor
+        ctx.Tensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
 
 
 
@@ -30,7 +32,7 @@ class CSAFunction(torch.autograd.Function):
         output_lst = ctx.Tensor(ctx.bz, c, ctx.h, ctx.w)
         ind_lst = torch.LongTensor(ctx.bz, ctx.h*ctx.w, ctx.h, ctx.w)
 
-        if torch.cuda.is_available:
+        if torch.cuda.is_available():
             ind_lst = ind_lst.cuda()
             nonmask_point_idx = nonmask_point_idx.cuda()
             mask_point_idx = mask_point_idx.cuda()

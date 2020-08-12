@@ -9,6 +9,10 @@ from .base_model import BaseModel
 from . import networks
 from .vgg16 import Vgg16
 
+import deep_inpainting.utils.config as cfg
+from deep_inpainting.utils.utils import load_model_from_oss
+
+
 class CSA(BaseModel):
     def name(self):
         return 'CSAModel'
@@ -33,7 +37,7 @@ class CSA(BaseModel):
 
 
         self.mask_global.zero_()
-        self.mask_global[:, :, int(self.opt.fineSize/4) + self.opt.overlap : int(self.opt.fineSize/2) + int(self.opt.fineSize/4) - self.opt.overlap,\
+        self.mask_global[:, :, int(self.opt.fineSize/4) + self.opt.overlap: int(self.opt.fineSize/2) + int(self.opt.fineSize/4) - self.opt.overlap,\
                                 int(self.opt.fineSize/4) + self.opt.overlap: int(self.opt.fineSize/2) + int(self.opt.fineSize/4) - self.opt.overlap] = 1
 
         self.mask_type = opt.mask_type
@@ -60,12 +64,18 @@ class CSA(BaseModel):
                                           opt.n_layers_D, opt.norm, use_sigmoid, opt.init_type, self.gpu_ids,
                                           opt.init_gain)            
         if not self.isTrain or opt.continue_train:
-            print('Loading pre-trained network!')
-            self.load_network(self.netG, 'G', opt.which_epoch)
-            self.load_network(self.netP, 'P', opt.which_epoch)
-            if self.isTrain:
-                self.load_network(self.netD, 'D', opt.which_epoch)
-                self.load_network(self.netF, 'F', opt.which_epoch)
+            if opt.oss_model:
+                self.load_network_oss(self.netG, "G", opt.which_epoch)
+                self.load_network_oss(self.netP, "P", opt.which_epoch)
+                if self.isTrain:
+                    self.load_network_oss(self.netD, 'D', opt.which_epoch)
+                    self.load_network_oss(self.netF, 'F', opt.which_epoch)
+            else:
+                self.load_network(self.netG, 'G', opt.which_epoch)
+                self.load_network(self.netP, 'P', opt.which_epoch)
+                if self.isTrain:
+                    self.load_network(self.netD, 'D', opt.which_epoch)
+                    self.load_network(self.netF, 'F', opt.which_epoch)
 
         if self.isTrain:
             self.old_lr = opt.lr
@@ -91,13 +101,11 @@ class CSA(BaseModel):
             for optimizer in self.optimizers:
                 self.schedulers.append(networks.get_scheduler(optimizer, opt))
 
-            print('---------- Networks initialized -------------')
             networks.print_network(self.netG)
             networks.print_network(self.netP)
             if self.isTrain:
                 networks.print_network(self.netD)
                 networks.print_network(self.netF)
-            print('-----------------------------------------------')
 
     def set_input(self,input,mask):
 
@@ -134,7 +142,10 @@ class CSA(BaseModel):
         self.Cosis_list[0].set_mask(mask_global, self.opt)
         self.Cosis_list2[0].set_mask(mask_global, self.opt)
     def forward(self):
-        self.real_A =self.input_A.to(self.device)
+        if len(self.gpu_ids) > 0:
+            self.real_A =self.input_A.to(self.device)
+        else:
+            self.real_A = self.input_A
         self.fake_P= self.netP(self.real_A)
         self.un=self.fake_P.clone()
         self.Unknowregion=self.un.data.masked_fill_(self.inv_ex_mask, 0)
@@ -142,7 +153,10 @@ class CSA(BaseModel):
         self.Syn=self.Unknowregion+self.knownregion
         self.Middle=torch.cat((self.Syn,self.input_A),1)
         self.fake_B = self.netG(self.Middle)
-        self.real_B = self.input_B.to(self.device)
+        if len(self.gpu_ids) > 0:
+            self.real_B = self.input_B.to(self.device)
+        else:
+            self.real_B = self.input_B
 
     def set_gt_latent(self):
         gt_latent=self.vgg(Variable(self.input_B,requires_grad=False))
@@ -151,7 +165,10 @@ class CSA(BaseModel):
 
 
     def test(self):
-        self.real_A = self.input_A.to(self.device)
+        if len(self.gpu_ids) > 0:
+            self.real_A = self.input_A.to(self.device)
+        else:
+            self.real_A = self.input_A
         self.fake_P= self.netP(self.real_A)
         self.un=self.fake_P.clone()
         self.Unknowregion=self.un.data.masked_fill_(self.inv_ex_mask, 0)
@@ -159,7 +176,10 @@ class CSA(BaseModel):
         self.Syn=self.Unknowregion+self.knownregion
         self.Middle=torch.cat((self.Syn,self.input_A),1)
         self.fake_B = self.netG(self.Middle)
-        self.real_B = self.input_B.to(self.device)
+        if len(self.gpu_ids) > 0:
+            self.real_B = self.input_B.to(self.device)
+        else:
+            self.real_B = self.input_B
 
 
 

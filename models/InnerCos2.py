@@ -1,7 +1,9 @@
 import torch.nn as nn
 import torch
 from torch.autograd import Variable
-import util.util as util
+import deep_inpainting.models.csa_inpainting.util.util as util
+
+
 class InnerCos2(nn.Module):
     def __init__(self, crit='MSE', strength=1, skip=0,infe=None):
         super(InnerCos2, self).__init__()
@@ -21,6 +23,8 @@ class InnerCos2(nn.Module):
         self.mask = mask.squeeze()
         if torch.cuda.is_available():
             self.mask = self.mask.float().cuda()
+        else:
+            self.mask = self.mask.float()
         self.mask = Variable(self.mask, requires_grad=False)
 
     def set_target(self, targetIn):

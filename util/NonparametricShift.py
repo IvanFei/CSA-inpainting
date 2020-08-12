@@ -11,7 +11,7 @@ class NonparametricShift(object):
         assert target_img.dim() == nDim, 'target image must be of dimension 3.'
         C = target_img.size(0)
 
-        self.Tensor = torch.cuda.FloatTensor if torch.cuda.is_available else torch.Tensor
+        self.Tensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.Tensor
 
         patches_all, patches_part, patches_mask= self._extract_patches(target_img, patch_size, stride, nonmask_point_idx,mask_point_idx)
 

@@ -1,6 +1,9 @@
 import os
 import torch
 
+import deep_inpainting.utils.config as cfg
+from deep_inpainting.utils.utils import load_model_from_oss
+
 
 class BaseModel():
     def name(self):
@@ -58,4 +61,8 @@ class BaseModel():
         for scheduler in self.schedulers:
             scheduler.step()
         lr = self.optimizers[0].param_groups[0]['lr']
-        print('learning rate = %.7f' % lr)
+
+    def load_network_oss(self, network, network_label, epoch_label):
+        save_filename = "%s_net_%s.pth" % (epoch_label, network_label)
+        model_io = load_model_from_oss(os.path.join(cfg.MODEL_DIR, save_filename))
+        network.load_state_dict(torch.load(model_io))

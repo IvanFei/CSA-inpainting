@@ -1,5 +1,6 @@
 #-*-coding:utf-8-*-
 import torch
+import logging
 import torch.nn as nn
 from torch.nn import init
 from torch.autograd import Variable
@@ -11,6 +12,10 @@ from torch.optim import lr_scheduler
 from .CSA_model import CSA_model
 from .InnerCos import InnerCos
 from .InnerCos2 import InnerCos2
+
+
+logger = logging.getLogger(__name__)
+
 
 ###############################################################################
 # Functions
@@ -65,7 +70,6 @@ def init_weights(net, init_type='normal', gain=0.02):
             init.normal(m.weight.data, 1.0, gain)
             init.constant(m.bias.data, 0.0)
 
-    print('initialize network with %s' % init_type)
     net.apply(init_func)
 
 
@@ -81,8 +85,6 @@ def define_G(input_nc, output_nc, ngf, which_model_netG, opt, mask_global, norm=
     netG = None
     norm_layer = get_norm_layer(norm_type=norm)
 
-
-
     cosis_list = []
     cosis_list2 = []
     csa_model = []
@@ -92,10 +94,6 @@ def define_G(input_nc, output_nc, ngf, which_model_netG, opt, mask_global, norm=
         netG = UnetGeneratorCSA(input_nc, output_nc, 8, opt, mask_global, csa_model,cosis_list, cosis_list2,ngf, norm_layer=norm_layer, use_dropout=use_dropout)
     else:
         raise NotImplementedError('Generator model name [%s] is not recognized' % which_model_netG)
- 
-    
-
-
 
     return init_net(netG, init_type, init_gain, gpu_ids),cosis_list ,cosis_list2,csa_model
 
@@ -120,8 +118,7 @@ def print_network(net):
     num_params = 0
     for param in net.parameters():
         num_params += param.numel()
-    print(net)
-    print('Total number of parameters: %d' % num_params)
+    logger.info('Total number of parameters: %d' % num_params)
 
 
 ##############################################################################
@@ -279,7 +276,6 @@ class CSA(nn.Module):
         super(CSA, self).__init__()
         self.outermost = outermost
 
-
         if input_nc is None:
             input_nc = outer_nc
 
@@ -297,7 +293,7 @@ class CSA(nn.Module):
         uprelu = nn.ReLU(True)
         upnorm = norm_layer(outer_nc, affine=True)
 
-        csa= CSA_model(opt.threshold, opt.fixed_mask, opt.shift_sz, opt.stride, opt.mask_thred, opt.triple_weight)
+        csa = CSA_model(opt.threshold, opt.fixed_mask, opt.shift_sz, opt.stride, opt.mask_thred, opt.triple_weight)
         csa.set_mask(mask_global, 3, opt.threshold)
         csa_model.append(csa)
         innerCos = InnerCos(strength=opt.strength, skip=opt.skip)
@@ -307,7 +303,6 @@ class CSA(nn.Module):
         innerCos2 = InnerCos2(strength=opt.strength, skip=opt.skip)
         innerCos2.set_mask(mask_global, opt)  # Here we need to set mask for innerCos layer too.
         cosis_list2.append(innerCos2)
-
 
         # Different position only has differences in `upconv`
         # for the outermost, the special is `tanh`
@@ -335,8 +330,8 @@ class CSA(nn.Module):
             upconv_3 = nn.ConvTranspose2d(inner_nc * 2, outer_nc,
                                         kernel_size=3, stride=1,
                                         padding=1)
-            down = [downrelu, downconv, downnorm,downrelu_3,downconv_3,csa,innerCos,downnorm_3]
-            up = [innerCos2,uprelu_3,upconv_3,upnorm_3,uprelu, upconv, upnorm]
+            down = [downrelu, downconv, downnorm, downrelu_3, downconv_3, csa, innerCos, downnorm_3]
+            up = [innerCos2, uprelu_3, upconv_3, upnorm_3, uprelu, upconv, upnorm]
 
             if use_dropout:
                 model = down + [submodule] + up + [nn.Dropout(0.5)]
@@ -354,8 +349,6 @@ class CSA(nn.Module):
             if h != x_latter.size(2) or w != x_latter.size(3):
                 x_latter = F.upsample(x_latter, (h, w), mode='bilinear')
             return torch.cat([x_latter, x], 1)  # cat in the C channel
-
-
 
 
 class UnetGenerator(nn.Module):
@@ -442,8 +435,6 @@ class UnetSkipConnectionBlock(nn.Module):
             return torch.cat([x_latter, x], 1)  # cat in the C channel
 
 
-
-
 ################################### This is for D ###################################
 # Defines the PatchGAN discriminator with the specified arguments.
 class NLayerDiscriminator(nn.Module):
@@ -491,6 +482,7 @@ class NLayerDiscriminator(nn.Module):
 
     def forward(self, input):
         return self.model(input)
+
 class PFDiscriminator(nn.Module):
     def __init__(self):
 

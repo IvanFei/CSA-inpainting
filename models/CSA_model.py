@@ -1,8 +1,9 @@
 import torch.nn as nn
 import torch
 from torch.autograd import Variable
-import util.util as util
+import deep_inpainting.models.csa_inpainting.util.util as util
 from .CSAFunction import CSAFunction
+
 
 class CSA_model(nn.Module):
     def __init__(self, threshold, fixed_mask, shift_sz=1, stride=1, mask_thred=1, triple_weight=1):
@@ -18,7 +19,7 @@ class CSA_model(nn.Module):
         self.mask_thred = mask_thred
         self.triple_weight = triple_weight
         self.cal_fixed_flag = True # whether we need to calculate the temp varaiables this time. 临时变量
-#这是恒定的张量，与空间相关，与马赛克范围无关
+        #这是恒定的张量，与空间相关，与马赛克范围无关
         # these two variables are for accerlating MaxCoord, it is constant tensors,
         # related with the spatialsize, unrelated with mask.
         self.sp_x = None
@@ -44,7 +45,6 @@ class CSA_model(nn.Module):
         if not (torch.is_tensor(self.sp_x) or torch.is_tensor(self.sp_y)):
             #返回
             self.sp_x, self.sp_y = util.cal_sps_for_Advanced_Indexing(self.h, self.w)
-
 
         return CSAFunction.apply(input, self.mask, self.shift_sz, self.stride, \
                                                          self.triple_weight, self.flag, self.nonmask_point_idx, self.mask_point_idx, self.flatten_offsets,\
